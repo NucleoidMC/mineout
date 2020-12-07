@@ -26,6 +26,7 @@ import xyz.nucleoid.plasmid.game.player.JoinResult;
 import xyz.nucleoid.plasmid.game.player.PlayerSet;
 import xyz.nucleoid.plasmid.game.rule.GameRule;
 import xyz.nucleoid.plasmid.game.rule.RuleResult;
+import xyz.nucleoid.plasmid.util.BlockBounds;
 import xyz.nucleoid.plasmid.widget.GlobalWidgets;
 import xyz.nucleoid.plasmid.widget.SidebarWidget;
 
@@ -124,6 +125,16 @@ public final class MineoutActive {
         if (this.closeTime > 0) {
             this.tickClosing(time);
             return;
+        }
+
+        BlockBounds mapBounds = this.map.getBounds();
+
+        PlayerSet players = this.gameSpace.getPlayers();
+        for (UUID id : this.playerStates.keySet()) {
+            ServerPlayerEntity player = players.getEntity(id);
+            if (player != null && !mapBounds.contains(player.getBlockPos())) {
+                this.spawnPlayer(player);
+            }
         }
 
         List<ServerPlayerEntity> completedPlayers = this.tickCheckpoints();

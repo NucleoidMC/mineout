@@ -16,10 +16,13 @@ public final class MineoutMap {
     private final List<MineoutCheckpoint> checkpoints = new ArrayList<>();
     private final List<BlockBounds> buildableBounds = new ArrayList<>();
 
+    private final BlockBounds bounds;
+
     private float rotation;
 
     public MineoutMap(MapTemplate template) {
         this.template = template;
+        this.bounds = template.getBounds();
     }
 
     public void addCheckpoint(MineoutCheckpoint checkpoint) {
@@ -66,5 +69,9 @@ public final class MineoutMap {
 
     public boolean containsCheckpoint(int index) {
         return index >= 0 && index < this.checkpoints.size();
+    }
+
+    public BlockBounds getBounds() {
+        return this.bounds;
     }
 }
