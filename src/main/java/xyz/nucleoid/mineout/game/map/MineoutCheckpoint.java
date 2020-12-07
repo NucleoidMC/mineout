@@ -38,6 +38,8 @@ public final class MineoutCheckpoint {
 
     public void spawnPlayer(ServerPlayerEntity player, float rotation) {
         player.teleport(player.getServerWorld(), this.spawn.getX() + 0.5, this.spawn.getY(), this.spawn.getZ() + 0.5, rotation, 0.0F);
+        player.networkHandler.syncWithPlayerPosition();
+
         this.applyTo(player);
     }
 
