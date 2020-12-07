@@ -1,0 +1,57 @@
+{
+  "type": "mineout:mineout",
+  "name": "Mineout",
+  "map": {
+    "template": "mineout:mineout",
+    "checkpoints": [
+      {
+        "region": "start_line",
+        "task": "Parkour to the other side!"
+      },
+      {
+        "region": "elytra_start",
+        "give": [
+          {
+            "id": "minecraft:firework_rocket",
+            "Count": 64
+          }
+        ],
+        "equip": {
+          "chest": {"id": "minecraft:elytra", "Count": 1}
+        },
+        "task": "Fly your elytra through the blocks!"
+      },
+      {
+        "region": "trident_start",
+        "give": [
+          {
+            "id": "minecraft:trident",
+            "tag": {
+              "Enchantments": [
+                {"id": "minecraft:riptide", "lvl": 1}
+              ]
+            },
+            "Count": 1
+          }
+        ],
+        "task": "Use riptide on the trident to jump through the hoops!"
+      },
+      {
+        "region": "bridge_start",
+        "give": [
+          {
+            "id": "minecraft:red_wool",
+            "Count": 64
+          }
+        ],
+        "task": "Bridge across to the other side!"
+      },
+      {"region": "finish_line"}
+    ]
+  },
+  "players": {
+    "min": 1,
+    "max": 10,
+    "threshold": 2
+  }
+}
