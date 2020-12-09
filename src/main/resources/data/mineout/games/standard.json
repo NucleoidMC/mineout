@@ -6,7 +6,19 @@
     "checkpoints": [
       {
         "region": "start_line",
-        "task": "Parkour to the other side!"
+        "give": [
+          {
+            "id": "minecraft:red_wool",
+            "Count": 64,
+            "tag": {
+              "CanPlaceOn": [
+                "minecraft:red_terracotta",
+                "minecraft:red_wool"
+              ]
+            }
+          }
+        ],
+        "task": "Bridge across to the other side!"
       },
       {
         "region": "elytra_start",
@@ -38,20 +50,8 @@
         "task": "Use riptide on the trident to jump through the hoops!"
       },
       {
-        "region": "bridge_start",
-        "give": [
-          {
-            "id": "minecraft:red_wool",
-            "Count": 64,
-            "tag": {
-              "CanPlaceOn": [
-                "minecraft:red_terracotta",
-                "minecraft:red_wool"
-              ]
-            }
-          }
-        ],
-        "task": "Bridge across to the other side!"
+        "region": "parkour_start",
+        "task": "Parkour the other side!"
       },
       {"region": "finish_line"}
     ]
