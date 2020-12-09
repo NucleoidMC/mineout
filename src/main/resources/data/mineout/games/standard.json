@@ -29,7 +29,8 @@
             "tag": {
               "Enchantments": [
                 {"id": "minecraft:riptide", "lvl": 1}
-              ]
+              ],
+              "Unbreakable": true
             },
             "Count": 1
           }
@@ -41,7 +42,13 @@
         "give": [
           {
             "id": "minecraft:red_wool",
-            "Count": 64
+            "Count": 64,
+            "tag": {
+              "CanPlaceOn": [
+                "minecraft:red_terracotta",
+                "minecraft:red_wool"
+              ]
+            }
           }
         ],
         "task": "Bridge across to the other side!"

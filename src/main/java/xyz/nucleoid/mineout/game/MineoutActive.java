@@ -7,6 +7,9 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemUsageContext;
+import net.minecraft.scoreboard.AbstractTeam;
+import net.minecraft.scoreboard.ServerScoreboard;
+import net.minecraft.scoreboard.Team;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
@@ -16,6 +19,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
+import org.apache.commons.lang3.RandomStringUtils;
 import xyz.nucleoid.mineout.game.map.MineoutCheckpoint;
 import xyz.nucleoid.mineout.game.map.MineoutMap;
 import xyz.nucleoid.plasmid.game.GameCloseReason;
@@ -49,6 +53,8 @@ public final class MineoutActive {
     private final Object2IntMap<UUID> playerStates = new Object2IntOpenHashMap<>();
     private final List<FinishRecord> finishRecords = new ArrayList<>();
 
+    private final Team team;
+
     private MineoutActive(GameSpace gameSpace, MineoutMap map, MineoutConfig config, GlobalWidgets widgets) {
         this.gameSpace = gameSpace;
         this.map = map;
@@ -57,6 +63,14 @@ public final class MineoutActive {
         this.sidebar = widgets.addSidebar(new LiteralText("Mineout!").formatted(Formatting.RED, Formatting.BOLD));
 
         this.playerStates.defaultReturnValue(0);
+
+        ServerScoreboard scoreboard = gameSpace.getServer().getScoreboard();
+        String teamKey = RandomStringUtils.randomAlphanumeric(16);
+        this.team = scoreboard.addTeam(teamKey);
+
+        this.team.setDisplayName(new LiteralText("Mineout"));
+        this.team.setCollisionRule(AbstractTeam.CollisionRule.NEVER);
+        this.team.setFriendlyFireAllowed(false);
     }
 
     public static void open(GameSpace gameSpace, MineoutMap map, MineoutConfig config) {
@@ -73,6 +87,7 @@ public final class MineoutActive {
             game.setRule(GameRule.THROW_ITEMS, RuleResult.DENY);
 
             game.on(GameOpenListener.EVENT, active::onOpen);
+            game.on(GameCloseListener.EVENT, active::onClose);
 
             game.on(OfferPlayerListener.EVENT, player -> JoinResult.ok());
             game.on(PlayerAddListener.EVENT, active::addPlayer);
@@ -97,7 +112,7 @@ public final class MineoutActive {
         for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
             this.playerStates.put(player.getUuid(), 0);
 
-            player.setGameMode(GameMode.SURVIVAL);
+            player.setGameMode(GameMode.ADVENTURE);
             startCheckpoint.spawnPlayer(player, this.map.getRotation());
             startCheckpoint.sendTaskTo(player);
         }
@@ -105,8 +120,16 @@ public final class MineoutActive {
         this.updateSidebar();
     }
 
+    private void onClose() {
+        ServerScoreboard scoreboard = this.gameSpace.getServer().getScoreboard();
+        scoreboard.removeTeam(this.team);
+    }
+
     private void addPlayer(ServerPlayerEntity player) {
         this.spawnPlayer(player);
+
+        ServerScoreboard scoreboard = this.gameSpace.getServer().getScoreboard();
+        scoreboard.addPlayerToTeam(player.getEntityName(), this.team);
     }
 
     private ActionResult onPlaceBlock(ServerPlayerEntity player, BlockPos pos, BlockState state, ItemUsageContext context) {
@@ -230,9 +253,18 @@ public final class MineoutActive {
     }
 
     private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
-        if (!player.isSpectator() && this.shouldRespawnFromDamage(source)) {
+        if (player.isSpectator()) {
+            return ActionResult.FAIL;
+        }
+
+        if (source == DamageSource.FLY_INTO_WALL) {
+            return ActionResult.PASS;
+        }
+
+        if (this.shouldRespawnFromDamage(source)) {
             this.spawnPlayer(player);
         }
+
         return ActionResult.FAIL;
     }
 
@@ -248,6 +280,7 @@ public final class MineoutActive {
     }
 
     private void spawnPlayer(ServerPlayerEntity player) {
+        player.setHealth(20.0F);
         player.setFireTicks(0);
         player.stopFallFlying();
 
@@ -259,7 +292,7 @@ public final class MineoutActive {
             return;
         }
 
-        player.setGameMode(GameMode.SURVIVAL);
+        player.setGameMode(GameMode.ADVENTURE);
         checkpoint.spawnPlayer(player, this.map.getRotation());
     }
 
