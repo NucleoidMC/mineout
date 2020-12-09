@@ -23,7 +23,8 @@ public final class CheckpointConfig {
                 Codec.STRING.fieldOf("region").forGetter(c -> c.region),
                 Codec.STRING.optionalFieldOf("task").forGetter(c -> Optional.ofNullable(c.task)),
                 ItemStack.CODEC.listOf().optionalFieldOf("give", ImmutableList.of()).forGetter(c -> c.give),
-                Codec.unboundedMap(EQUIPMENT_SLOT_CODEC, ItemStack.CODEC).optionalFieldOf("equip", ImmutableMap.of()).forGetter(c -> c.equip)
+                Codec.unboundedMap(EQUIPMENT_SLOT_CODEC, ItemStack.CODEC).optionalFieldOf("equip", ImmutableMap.of()).forGetter(c -> c.equip),
+                Codec.BOOL.optionalFieldOf("pvp", false).forGetter(c -> c.pvp)
         ).apply(instance, CheckpointConfig::new);
     });
 
@@ -32,12 +33,14 @@ public final class CheckpointConfig {
 
     private final List<ItemStack> give;
     private final Map<EquipmentSlot, ItemStack> equip;
+    private final boolean pvp;
 
-    private CheckpointConfig(String region, Optional<String> task, List<ItemStack> give, Map<EquipmentSlot, ItemStack> equip) {
+    private CheckpointConfig(String region, Optional<String> task, List<ItemStack> give, Map<EquipmentSlot, ItemStack> equip, boolean pvp) {
         this.region = region;
         this.task = task.orElse(null);
         this.give = give;
         this.equip = equip;
+        this.pvp = pvp;
     }
 
     public MineoutCheckpoint create(MapTemplateMetadata metadata) {
@@ -46,6 +49,6 @@ public final class CheckpointConfig {
             throw new GameOpenException(new LiteralText("Missing checkpoint region: " + this.region));
         }
 
-        return new MineoutCheckpoint(bounds, this.task, this.give, this.equip);
+        return new MineoutCheckpoint(bounds, this.task, this.give, this.equip, this.pvp);
     }
 }

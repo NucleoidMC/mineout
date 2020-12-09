@@ -70,7 +70,6 @@ public final class MineoutActive {
 
         this.team.setDisplayName(new LiteralText("Mineout"));
         this.team.setCollisionRule(AbstractTeam.CollisionRule.NEVER);
-        this.team.setFriendlyFireAllowed(false);
     }
 
     public static void open(GameSpace gameSpace, MineoutMap map, MineoutConfig config) {
@@ -255,6 +254,14 @@ public final class MineoutActive {
     private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
         if (player.isSpectator()) {
             return ActionResult.FAIL;
+        }
+
+        if (source.getSource() instanceof ServerPlayerEntity) {
+            int checkpointIndex = this.playerStates.getOrDefault(player.getUuid(), -1);
+            MineoutCheckpoint checkpoint = this.map.getCheckpoint(checkpointIndex);
+            if (checkpoint != null && checkpoint.isPvpEnabled()) {
+                return ActionResult.PASS;
+            }
         }
 
         if (source == DamageSource.FLY_INTO_WALL) {

@@ -16,20 +16,26 @@ public final class MineoutCheckpoint {
     private final String task;
     private final List<ItemStack> give;
     private final Map<EquipmentSlot, ItemStack> equip;
+    private final boolean pvp;
 
     private final BlockPos spawn;
 
-    MineoutCheckpoint(BlockBounds bounds, String task, List<ItemStack> give, Map<EquipmentSlot, ItemStack> equip) {
+    MineoutCheckpoint(BlockBounds bounds, String task, List<ItemStack> give, Map<EquipmentSlot, ItemStack> equip, boolean pvp) {
         this.bounds = bounds;
         this.task = task;
         this.give = give;
         this.equip = equip;
+        this.pvp = pvp;
 
         this.spawn = new BlockPos(bounds.getCenter());
     }
 
     public BlockPos getSpawn() {
         return this.spawn;
+    }
+
+    public boolean isPvpEnabled() {
+        return this.pvp;
     }
 
     public boolean contains(ServerPlayerEntity player) {

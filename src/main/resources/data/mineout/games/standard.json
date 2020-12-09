@@ -18,7 +18,8 @@
             }
           }
         ],
-        "task": "Bridge across to the other side!"
+        "task": "Bridge across to the other side!",
+        "pvp": true
       },
       {
         "region": "elytra_start",
