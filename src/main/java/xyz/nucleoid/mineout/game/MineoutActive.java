@@ -84,12 +84,14 @@ public final class MineoutActive {
             game.setRule(GameRule.FALL_DAMAGE, RuleResult.DENY);
             game.setRule(GameRule.HUNGER, RuleResult.DENY);
             game.setRule(GameRule.THROW_ITEMS, RuleResult.DENY);
+            game.setRule(GameRule.PVP, RuleResult.ALLOW);
 
             game.on(GameOpenListener.EVENT, active::onOpen);
             game.on(GameCloseListener.EVENT, active::onClose);
 
             game.on(OfferPlayerListener.EVENT, player -> JoinResult.ok());
             game.on(PlayerAddListener.EVENT, active::addPlayer);
+            game.on(PlayerRemoveListener.EVENT, active::removePlayer);
 
             game.on(GameTickListener.EVENT, active::tick);
 
@@ -131,6 +133,13 @@ public final class MineoutActive {
         scoreboard.addPlayerToTeam(player.getEntityName(), this.team);
     }
 
+    private void removePlayer(ServerPlayerEntity player) {
+        ServerScoreboard scoreboard = this.gameSpace.getServer().getScoreboard();
+        scoreboard.removePlayerFromTeam(player.getEntityName(), this.team);
+
+        this.playerStates.removeInt(player.getUuid());
+    }
+
     private ActionResult onPlaceBlock(ServerPlayerEntity player, BlockPos pos, BlockState state, ItemUsageContext context) {
         if (this.playerStates.containsKey(player.getUuid())) {
             if (this.map.canBuildAt(pos)) {
@@ -164,11 +173,11 @@ public final class MineoutActive {
             for (ServerPlayerEntity player : completedPlayers) {
                 this.onPlayerComplete(time, player);
             }
+        }
 
-            if (this.playerStates.isEmpty()) {
-                this.closeTime = time + CLOSE_TICKS;
-                this.broadcastFinish();
-            }
+        if (this.playerStates.isEmpty()) {
+            this.closeTime = time + CLOSE_TICKS;
+            this.broadcastFinish();
         }
     }
 
