@@ -1,6 +1,8 @@
 package xyz.nucleoid.mineout.game;
 
 import com.mojang.authlib.GameProfile;
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -54,6 +56,8 @@ public final class MineoutActive {
     private final List<FinishRecord> finishRecords = new ArrayList<>();
 
     private final Team team;
+
+    private final MineoutBlockDecay blockDecay = new MineoutBlockDecay(6, 10);
 
     private MineoutActive(GameSpace gameSpace, MineoutMap map, MineoutConfig config, GlobalWidgets widgets) {
         this.gameSpace = gameSpace;
@@ -143,6 +147,7 @@ public final class MineoutActive {
     private ActionResult onPlaceBlock(ServerPlayerEntity player, BlockPos pos, BlockState state, ItemUsageContext context) {
         if (this.playerStates.containsKey(player.getUuid())) {
             if (this.map.canBuildAt(pos)) {
+                this.blockDecay.enqueue(pos);
                 return ActionResult.SUCCESS;
             }
         }
@@ -178,6 +183,24 @@ public final class MineoutActive {
         if (this.playerStates.isEmpty()) {
             this.closeTime = time + CLOSE_TICKS;
             this.broadcastFinish();
+            return;
+        }
+
+        LongSet decayBlocks = this.blockDecay.tick(time);
+        if (!decayBlocks.isEmpty()) {
+            this.applyDecay(decayBlocks);
+        }
+    }
+
+    private void applyDecay(LongSet blocks) {
+        ServerWorld world = this.gameSpace.getWorld();
+
+        BlockPos.Mutable mutablePos = new BlockPos.Mutable();
+
+        LongIterator iterator = blocks.iterator();
+        while (iterator.hasNext()) {
+            mutablePos.set(iterator.nextLong());
+            world.breakBlock(mutablePos, false);
         }
     }
 
