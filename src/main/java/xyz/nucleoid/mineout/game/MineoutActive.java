@@ -33,6 +33,7 @@ import xyz.nucleoid.plasmid.game.player.PlayerSet;
 import xyz.nucleoid.plasmid.game.rule.GameRule;
 import xyz.nucleoid.plasmid.game.rule.RuleResult;
 import xyz.nucleoid.plasmid.util.BlockBounds;
+import xyz.nucleoid.plasmid.widget.BossBarWidget;
 import xyz.nucleoid.plasmid.widget.GlobalWidgets;
 import xyz.nucleoid.plasmid.widget.SidebarWidget;
 
@@ -48,8 +49,10 @@ public final class MineoutActive {
     private final MineoutConfig config;
 
     private final SidebarWidget sidebar;
+    private final BossBarWidget timerBar;
 
     private long startTime;
+    private long maximumTime;
     private long closeTime = -1;
 
     private final Object2IntMap<UUID> playerStates = new Object2IntOpenHashMap<>();
@@ -57,7 +60,7 @@ public final class MineoutActive {
 
     private final Team team;
 
-    private final MineoutBlockDecay blockDecay = new MineoutBlockDecay(6, 10);
+    private final MineoutBlockDecay blockDecay;
 
     private MineoutActive(GameSpace gameSpace, MineoutMap map, MineoutConfig config, GlobalWidgets widgets) {
         this.gameSpace = gameSpace;
@@ -65,8 +68,13 @@ public final class MineoutActive {
         this.config = config;
 
         this.sidebar = widgets.addSidebar(new LiteralText("Mineout!").formatted(Formatting.RED, Formatting.BOLD));
+        this.timerBar = widgets.addBossBar(new LiteralText("Time left"));
 
         this.playerStates.defaultReturnValue(0);
+
+        int decayStepLength = 10;
+        int decaySteps = config.decaySeconds * 20 / decayStepLength;
+        this.blockDecay = new MineoutBlockDecay(decaySteps, decayStepLength);
 
         ServerScoreboard scoreboard = gameSpace.getServer().getScoreboard();
         String teamKey = RandomStringUtils.randomAlphanumeric(16);
@@ -108,6 +116,7 @@ public final class MineoutActive {
 
     private void onOpen() {
         this.startTime = this.gameSpace.getWorld().getTime();
+        this.maximumTime = this.startTime + this.config.timeLimitSeconds * 20;
 
         MineoutCheckpoint startCheckpoint = this.map.getCheckpoint(0);
         if (startCheckpoint == null) {
@@ -180,8 +189,9 @@ public final class MineoutActive {
             }
         }
 
-        if (this.playerStates.isEmpty()) {
+        if (this.playerStates.isEmpty() || time >= this.maximumTime) {
             this.closeTime = time + CLOSE_TICKS;
+            this.timerBar.close();
             this.broadcastFinish();
             return;
         }
@@ -189,6 +199,17 @@ public final class MineoutActive {
         LongSet decayBlocks = this.blockDecay.tick(time);
         if (!decayBlocks.isEmpty()) {
             this.applyDecay(decayBlocks);
+        }
+
+        if (time % 20 == 0) {
+            long ticksRemaining = this.maximumTime - time;
+            long secondsRemaining = ticksRemaining / 20;
+
+            long minutes = secondsRemaining / 60;
+            long seconds = secondsRemaining % 60;
+
+            this.timerBar.setProgress((float) ticksRemaining / (this.config.timeLimitSeconds * 20));
+            this.timerBar.setTitle(new LiteralText(String.format("Time remaining: %02d:%02d", minutes, seconds)));
         }
     }
 
@@ -346,8 +367,11 @@ public final class MineoutActive {
     private void updateSidebar() {
         this.sidebar.set(content -> {
             content.writeLine(Formatting.GREEN + "Race to the finish line!");
-            content.writeLine("");
+            if (this.finishRecords.isEmpty()) {
+                return;
+            }
 
+            content.writeLine("");
             for (FinishRecord record : this.finishRecords) {
                 content.writeLine(Formatting.AQUA + record.player.getName() + ": " + Formatting.GOLD + record.seconds + "s");
             }
