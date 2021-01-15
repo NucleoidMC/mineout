@@ -9,11 +9,13 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemUsageContext;
+import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.ServerScoreboard;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
@@ -50,17 +52,13 @@ public final class MineoutActive {
 
     private final SidebarWidget sidebar;
     private final BossBarWidget timerBar;
-
+    private final Object2IntMap<UUID> playerStates = new Object2IntOpenHashMap<>();
+    private final List<FinishRecord> finishRecords = new ArrayList<>();
+    private final Team team;
+    private final MineoutBlockDecay blockDecay;
     private long startTime;
     private long maximumTime;
     private long closeTime = -1;
-
-    private final Object2IntMap<UUID> playerStates = new Object2IntOpenHashMap<>();
-    private final List<FinishRecord> finishRecords = new ArrayList<>();
-
-    private final Team team;
-
-    private final MineoutBlockDecay blockDecay;
 
     private MineoutActive(GameSpace gameSpace, MineoutMap map, MineoutConfig config, GlobalWidgets widgets) {
         this.gameSpace = gameSpace;
@@ -114,9 +112,21 @@ public final class MineoutActive {
         });
     }
 
+    private static String ordinal(int i) {
+        String[] suffixes = new String[] { "th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th" };
+        switch (i % 100) {
+            case 11:
+            case 12:
+            case 13:
+                return i + "th";
+            default:
+                return i + suffixes[i % 10];
+        }
+    }
+
     private void onOpen() {
         this.startTime = this.gameSpace.getWorld().getTime();
-        this.maximumTime = this.startTime + this.config.timeLimitSeconds * 20;
+        this.maximumTime = this.startTime + this.config.timeLimitSeconds * 20L;
 
         MineoutCheckpoint startCheckpoint = this.map.getCheckpoint(0);
         if (startCheckpoint == null) {
@@ -254,6 +264,7 @@ public final class MineoutActive {
     }
 
     private void onPlayerComplete(long time, ServerPlayerEntity player) {
+        PlayerSet players = this.gameSpace.getPlayers();
         this.spawnSpectator(player);
 
         this.playerStates.removeInt(player.getUuid());
@@ -263,19 +274,31 @@ public final class MineoutActive {
 
         this.updateSidebar();
 
-        this.gameSpace.getPlayers().sendMessage(
-                new LiteralText("")
-                        .append(player.getDisplayName())
-                        .append(" finished with a time of ")
-                        .append(new LiteralText(finishSeconds + "s").formatted(Formatting.AQUA))
-                        .append("!")
-                        .formatted(Formatting.GOLD)
-        );
+        Text title = new LiteralText("Well Done!").formatted(Formatting.GREEN);
+        Text subtitle = new LiteralText("You completed the course in ")
+                .append(new LiteralText(finishSeconds + "s").formatted(Formatting.AQUA))
+                .formatted(Formatting.GOLD);
+
+        player.networkHandler.sendPacket(new TitleS2CPacket(10, 60, 10));
+        player.networkHandler.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.TITLE, title));
+        player.networkHandler.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.SUBTITLE, subtitle));
+
+        for (ServerPlayerEntity otherPlayer : players) {
+            if (!otherPlayer.getUuid().equals(player.getUuid())) {
+                otherPlayer.playSound(SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                otherPlayer.sendMessage(
+                        new LiteralText("").append(player.getDisplayName())
+                                .append(" finished with a time of ")
+                                .append(new LiteralText(finishSeconds + "s").formatted(Formatting.AQUA))
+                                .append("!")
+                                .formatted(Formatting.GOLD),
+                        false
+                );
+            }
+        }
     }
 
     private void movePlayerToNextCheckpoint(ServerPlayerEntity player, MineoutCheckpoint checkpoint) {
-        player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
-
         checkpoint.applyTo(player);
         checkpoint.sendTaskTo(player);
     }
@@ -287,21 +310,42 @@ public final class MineoutActive {
     }
 
     private void broadcastFinish() {
-        Text message;
+        PlayerSet players = this.gameSpace.getPlayers();
         if (!this.finishRecords.isEmpty()) {
             FinishRecord winningRecord = this.finishRecords.get(0);
 
-            message = new LiteralText("")
-                    .append(new LiteralText(winningRecord.player.getName()).formatted(Formatting.AQUA))
-                    .append(" won the game!")
-                    .formatted(Formatting.GOLD);
-        } else {
-            message = new LiteralText("Nobody finished the game!").formatted(Formatting.GOLD);
-        }
+            Text message = new LiteralText("").append(winningRecord.player.getName()).append(" was 1st!").formatted(Formatting.GOLD);
+            if (players.size() != 1) {
+                for (ServerPlayerEntity player : players) {
+                    Text subtitle;
 
-        PlayerSet players = this.gameSpace.getPlayers();
-        players.sendMessage(message);
-        players.sendSound(SoundEvents.ENTITY_VILLAGER_YES);
+                    int finishIndex = -1;
+                    for (int i = 0; i < this.finishRecords.size(); i++) {
+                        FinishRecord record = this.finishRecords.get(i);
+                        if (record.player.getId().equals(player.getUuid())) {
+                            finishIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (finishIndex != -1) {
+                        subtitle = new LiteralText("You finished in ").append(ordinal(finishIndex + 1)).append(" place!").formatted(Formatting.BLUE);
+                    } else {
+                        subtitle = new LiteralText("You didn't finish the course.").formatted(Formatting.RED);
+                    }
+
+                    player.networkHandler.sendPacket(new TitleS2CPacket(10, 60, 10));
+                    player.networkHandler.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.TITLE, message));
+                    player.networkHandler.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.SUBTITLE, subtitle));
+                }
+            }
+        } else {
+            Text message = new LiteralText("You didn't finish the course.").formatted(Formatting.RED);
+            Text subtitle = new LiteralText("Don't worry! No one else finished the course either!").formatted(Formatting.AQUA);
+            players.sendPacket(new TitleS2CPacket(10, 60, 10));
+            players.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.TITLE, message));
+            players.sendPacket(new TitleS2CPacket(TitleS2CPacket.Action.SUBTITLE, subtitle));
+        }
     }
 
     private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
