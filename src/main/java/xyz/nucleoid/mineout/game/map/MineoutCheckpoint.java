@@ -6,7 +6,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
-import xyz.nucleoid.plasmid.util.BlockBounds;
+import xyz.nucleoid.map_templates.BlockBounds;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +27,7 @@ public final class MineoutCheckpoint {
         this.equip = equip;
         this.pvp = pvp;
 
-        this.spawn = new BlockPos(bounds.getCenter());
+        this.spawn = new BlockPos(bounds.center());
     }
 
     public BlockPos getSpawn() {
@@ -56,7 +56,7 @@ public final class MineoutCheckpoint {
     }
 
     public void applyTo(ServerPlayerEntity player) {
-        player.inventory.clear();
+        player.getInventory().clear();
         player.setHealth(20.0F);
 
         for (Map.Entry<EquipmentSlot, ItemStack> entry : this.equip.entrySet()) {
@@ -66,7 +66,7 @@ public final class MineoutCheckpoint {
         }
 
         for (ItemStack stack : this.give) {
-            player.inventory.offerOrDrop(player.world, stack.copy());
+            player.getInventory().offerOrDrop(stack.copy());
         }
     }
 }

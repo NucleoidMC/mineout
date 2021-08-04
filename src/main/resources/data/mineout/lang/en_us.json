@@ -1,3 +1,4 @@
 {
-    "game.mineout.mineout": "Mineout"
+  "gameType.mineout.mineout": "Mineout",
+  "gameType.mineout.mineout.desc": "Rush against other players to the end of an obstacle course!"
 }

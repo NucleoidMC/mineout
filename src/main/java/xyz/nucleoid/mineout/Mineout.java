@@ -16,8 +16,8 @@ public final class Mineout implements ModInitializer {
     public void onInitialize() {
         GameType.register(
                 new Identifier(Mineout.ID, "mineout"),
-                MineoutWaiting::open,
-                MineoutConfig.CODEC
+                MineoutConfig.CODEC,
+                MineoutWaiting::open
         );
     }
 }

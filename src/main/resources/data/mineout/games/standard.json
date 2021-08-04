@@ -1,6 +1,7 @@
 {
   "type": "mineout:mineout",
-  "name": "Mineout",
+  "icon": "minecraft:red_wool",
+  "description": "gameType.mineout.mineout.desc",
   "map": {
     "template": "mineout:mineout",
     "checkpoints": [
