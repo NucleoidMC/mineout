@@ -6,7 +6,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplateMetadata;
 import xyz.nucleoid.plasmid.game.GameOpenException;
@@ -41,7 +41,7 @@ public final record CheckpointConfig(
     public MineoutCheckpoint create(MapTemplateMetadata metadata) {
         BlockBounds bounds = metadata.getFirstRegionBounds(this.region);
         if (bounds == null) {
-            throw new GameOpenException(new LiteralText("Missing checkpoint region: " + this.region));
+            throw new GameOpenException(Text.literal("Missing checkpoint region: " + this.region));
         }
 
         return new MineoutCheckpoint(bounds, this.task, this.give, this.equip, this.pvp);

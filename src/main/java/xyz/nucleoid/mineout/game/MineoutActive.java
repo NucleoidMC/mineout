@@ -13,11 +13,11 @@ import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import net.minecraft.scoreboard.AbstractTeam;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
@@ -58,7 +58,7 @@ public final class MineoutActive {
     private static final GameTeam TEAM = new GameTeam(
             new GameTeamKey(Mineout.ID),
             GameTeamConfig.builder()
-                    .setName(new LiteralText("Mineout"))
+                    .setName(Text.literal("Mineout"))
                     .setCollision(AbstractTeam.CollisionRule.NEVER)
                     .build()
     );
@@ -86,8 +86,8 @@ public final class MineoutActive {
         this.map = map;
         this.config = config;
 
-        this.sidebar = widgets.addSidebar(new LiteralText("Mineout!").formatted(Formatting.RED, Formatting.BOLD));
-        this.timerBar = widgets.addBossBar(new LiteralText("Time left"));
+        this.sidebar = widgets.addSidebar(Text.literal("Mineout!").formatted(Formatting.RED, Formatting.BOLD));
+        this.timerBar = widgets.addBossBar(Text.literal("Time left"));
 
         this.playerStates.defaultReturnValue(0);
 
@@ -143,7 +143,7 @@ public final class MineoutActive {
 
         MineoutCheckpoint startCheckpoint = this.map.getCheckpoint(0);
         if (startCheckpoint == null) {
-            throw new GameOpenException(new LiteralText("No start checkpoint!"));
+            throw new GameOpenException(Text.literal("No start checkpoint!"));
         }
 
         for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
@@ -227,7 +227,7 @@ public final class MineoutActive {
             long seconds = secondsRemaining % 60;
 
             this.timerBar.setProgress((float) ticksRemaining / (this.config.timeLimitSeconds() * 20));
-            this.timerBar.setTitle(new LiteralText(String.format("Time remaining: %02d:%02d", minutes, seconds)));
+            this.timerBar.setTitle(Text.literal(String.format("Time remaining: %02d:%02d", minutes, seconds)));
         }
     }
 
@@ -280,9 +280,9 @@ public final class MineoutActive {
 
         this.updateSidebar();
 
-        Text title = new LiteralText("Well Done!").formatted(Formatting.GREEN);
-        Text subtitle = new LiteralText("You completed the course in ")
-                .append(new LiteralText(finishSeconds + "s").formatted(Formatting.AQUA))
+        Text title = Text.literal("Well Done!").formatted(Formatting.GREEN);
+        Text subtitle = Text.literal("You completed the course in ")
+                .append(Text.literal(finishSeconds + "s").formatted(Formatting.AQUA))
                 .formatted(Formatting.GOLD);
 
         player.networkHandler.sendPacket(new TitleFadeS2CPacket(10, 60, 10));
@@ -293,9 +293,9 @@ public final class MineoutActive {
             if (!otherPlayer.getUuid().equals(player.getUuid())) {
                 otherPlayer.playSound(SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.PLAYERS, 1.0F, 1.0F);
                 otherPlayer.sendMessage(
-                        new LiteralText("").append(player.getDisplayName())
+                        Text.empty().append(player.getDisplayName())
                                 .append(" finished with a time of ")
-                                .append(new LiteralText(finishSeconds + "s").formatted(Formatting.AQUA))
+                                .append(Text.literal(finishSeconds + "s").formatted(Formatting.AQUA))
                                 .append("!")
                                 .formatted(Formatting.GOLD),
                         false
@@ -320,7 +320,7 @@ public final class MineoutActive {
         if (!this.finishRecords.isEmpty()) {
             FinishRecord winningRecord = this.finishRecords.get(0);
 
-            Text message = new LiteralText("").append(winningRecord.player.getName()).append(" was 1st!").formatted(Formatting.GOLD);
+            Text message = Text.empty().append(winningRecord.player.getName()).append(" was 1st!").formatted(Formatting.GOLD);
             if (players.size() != 1) {
                 for (ServerPlayerEntity player : players) {
                     Text subtitle;
@@ -335,9 +335,9 @@ public final class MineoutActive {
                     }
 
                     if (finishIndex != -1) {
-                        subtitle = new LiteralText("You finished in ").append(ordinal(finishIndex + 1)).append(" place!").formatted(Formatting.BLUE);
+                        subtitle = Text.literal("You finished in ").append(ordinal(finishIndex + 1)).append(" place!").formatted(Formatting.BLUE);
                     } else {
-                        subtitle = new LiteralText("You didn't finish the course.").formatted(Formatting.RED);
+                        subtitle = Text.literal("You didn't finish the course.").formatted(Formatting.RED);
                     }
 
                     player.networkHandler.sendPacket(new TitleFadeS2CPacket(10, 60, 10));
@@ -346,8 +346,8 @@ public final class MineoutActive {
                 }
             }
         } else {
-            Text message = new LiteralText("You didn't finish the course.").formatted(Formatting.RED);
-            Text subtitle = new LiteralText("Don't worry! No one else finished the course either!").formatted(Formatting.AQUA);
+            Text message = Text.literal("You didn't finish the course.").formatted(Formatting.RED);
+            Text subtitle = Text.literal("Don't worry! No one else finished the course either!").formatted(Formatting.AQUA);
             players.sendPacket(new TitleFadeS2CPacket(10, 60, 10));
             players.sendPacket(new TitleS2CPacket(message));
             players.sendPacket(new SubtitleS2CPacket(subtitle));
@@ -416,15 +416,15 @@ public final class MineoutActive {
 
     private void updateSidebar() {
         this.sidebar.set(content -> {
-            content.add(new LiteralText("Race to the finish line!").formatted(Formatting.GREEN));
+            content.add(Text.literal("Race to the finish line!").formatted(Formatting.GREEN));
             if (this.finishRecords.isEmpty()) {
                 return;
             }
 
-            content.add(LiteralText.EMPTY);
+            content.add(ScreenTexts.EMPTY);
             for (var record : this.finishRecords) {
-                var name = new LiteralText(record.player.getName() + ": ").formatted(Formatting.AQUA);
-                var time = new LiteralText(record.seconds + "s").formatted(Formatting.GOLD);
+                var name = Text.literal(record.player.getName() + ": ").formatted(Formatting.AQUA);
+                var time = Text.literal(record.seconds + "s").formatted(Formatting.GOLD);
                 content.add(name.append(time));
             }
         });

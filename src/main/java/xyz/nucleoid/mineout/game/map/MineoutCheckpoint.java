@@ -3,7 +3,7 @@ package xyz.nucleoid.mineout.game.map;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import xyz.nucleoid.map_templates.BlockBounds;
@@ -43,7 +43,7 @@ public final class MineoutCheckpoint {
     }
 
     public void spawnPlayer(ServerPlayerEntity player, float rotation) {
-        player.teleport(player.getServerWorld(), this.spawn.getX() + 0.5, this.spawn.getY(), this.spawn.getZ() + 0.5, rotation, 0.0F);
+        player.teleport(player.getWorld(), this.spawn.getX() + 0.5, this.spawn.getY(), this.spawn.getZ() + 0.5, rotation, 0.0F);
         player.networkHandler.syncWithPlayerPosition();
 
         this.applyTo(player);
@@ -51,7 +51,7 @@ public final class MineoutCheckpoint {
 
     public void sendTaskTo(ServerPlayerEntity player) {
         if (this.task != null) {
-            player.sendMessage(new LiteralText(this.task).formatted(Formatting.GREEN), false);
+            player.sendMessage(Text.literal(this.task).formatted(Formatting.GREEN), false);
         }
     }
 
