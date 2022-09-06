@@ -2,6 +2,7 @@ package xyz.nucleoid.mineout.game;
 
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.Vec3d;
@@ -48,6 +49,7 @@ public final class MineoutWaiting {
             MineoutWaiting waiting = new MineoutWaiting(world, activity.getGameSpace(), map, config);
 
             activity.listen(GameActivityEvents.REQUEST_START, waiting::requestStart);
+            activity.listen(GameActivityEvents.TICK, waiting::tick);
 
             activity.listen(GamePlayerEvents.OFFER, waiting::offerPlayer);
             activity.listen(PlayerDamageEvent.EVENT, (player, source, amount) -> ActionResult.FAIL);
@@ -58,6 +60,15 @@ public final class MineoutWaiting {
     private GameResult requestStart() {
         MineoutActive.open(this.world, this.gameSpace, this.map, this.config);
         return GameResult.ok();
+    }
+
+    private void tick() {
+        for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
+            if (!this.map.getBounds().contains(player.getBlockPos())) {
+                Vec3d spawn = Vec3d.ofBottomCenter(this.map.getSpawn());
+                player.teleport(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), 0, 0);
+            }
+        }
     }
 
     private PlayerOfferResult offerPlayer(PlayerOffer offer) {
