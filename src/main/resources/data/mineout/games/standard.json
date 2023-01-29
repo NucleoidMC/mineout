@@ -1,7 +1,14 @@
 {
   "type": "mineout:mineout",
   "icon": "minecraft:red_wool",
-  "description": "gameType.mineout.mineout.desc",
+  "description": [
+    {
+      "translate": "gameType.mineout.mineout.desc.1"
+    },
+    {
+      "translate": "gameType.mineout.mineout.desc.2"
+    }
+  ],
   "map": {
     "template": "mineout:mineout",
     "checkpoints": [
