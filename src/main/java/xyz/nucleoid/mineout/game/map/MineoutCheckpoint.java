@@ -27,7 +27,7 @@ public final class MineoutCheckpoint {
         this.equip = equip;
         this.pvp = pvp;
 
-        this.spawn = new BlockPos(bounds.center());
+        this.spawn = BlockPos.ofFloored(bounds.center());
     }
 
     public BlockPos getSpawn() {
