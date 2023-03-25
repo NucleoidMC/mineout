@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
@@ -367,7 +368,7 @@ public final class MineoutActive {
             }
         }
 
-        if (source == DamageSource.FLY_INTO_WALL) {
+        if (source.isOf(DamageTypes.FLY_INTO_WALL)) {
             return ActionResult.PASS;
         }
 
@@ -379,7 +380,7 @@ public final class MineoutActive {
     }
 
     private boolean shouldRespawnFromDamage(DamageSource source) {
-        return source == DamageSource.LAVA || source == DamageSource.OUT_OF_WORLD;
+        return source.isOf(DamageTypes.LAVA) || source.isOf(DamageTypes.OUT_OF_WORLD);
     }
 
     private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
