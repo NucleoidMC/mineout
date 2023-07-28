@@ -66,7 +66,7 @@ public final class MineoutWaiting {
         for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
             if (!this.map.getBounds().contains(player.getBlockPos())) {
                 Vec3d spawn = Vec3d.ofBottomCenter(this.map.getSpawn());
-                player.teleport(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), 0, 0);
+                player.teleport(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), this.map.getRotation(), 0);
             }
         }
     }
