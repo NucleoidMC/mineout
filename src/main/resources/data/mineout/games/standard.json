@@ -60,7 +60,7 @@
       },
       {
         "region": "parkour_start",
-        "task": "Parkour the other side!"
+        "task": "Parkour to the other side!"
       },
       {"region": "finish_line"}
     ]
