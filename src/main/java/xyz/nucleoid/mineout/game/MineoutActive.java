@@ -20,7 +20,6 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -29,28 +28,31 @@ import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.mineout.Mineout;
 import xyz.nucleoid.mineout.game.map.MineoutCheckpoint;
 import xyz.nucleoid.mineout.game.map.MineoutMap;
-import xyz.nucleoid.plasmid.game.GameCloseReason;
-import xyz.nucleoid.plasmid.game.GameOpenException;
-import xyz.nucleoid.plasmid.game.GameSpace;
-import xyz.nucleoid.plasmid.game.common.GlobalWidgets;
-import xyz.nucleoid.plasmid.game.common.team.GameTeam;
-import xyz.nucleoid.plasmid.game.common.team.GameTeamConfig;
-import xyz.nucleoid.plasmid.game.common.team.GameTeamKey;
-import xyz.nucleoid.plasmid.game.common.team.TeamManager;
-import xyz.nucleoid.plasmid.game.common.widget.BossBarWidget;
-import xyz.nucleoid.plasmid.game.common.widget.SidebarWidget;
-import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
-import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
-import xyz.nucleoid.plasmid.game.player.PlayerOffer;
-import xyz.nucleoid.plasmid.game.player.PlayerOfferResult;
-import xyz.nucleoid.plasmid.game.player.PlayerSet;
-import xyz.nucleoid.plasmid.game.rule.GameRuleType;
+import xyz.nucleoid.plasmid.api.game.GameCloseReason;
+import xyz.nucleoid.plasmid.api.game.GameOpenException;
+import xyz.nucleoid.plasmid.api.game.GameSpace;
+import xyz.nucleoid.plasmid.api.game.common.GlobalWidgets;
+import xyz.nucleoid.plasmid.api.game.common.team.GameTeam;
+import xyz.nucleoid.plasmid.api.game.common.team.GameTeamConfig;
+import xyz.nucleoid.plasmid.api.game.common.team.GameTeamKey;
+import xyz.nucleoid.plasmid.api.game.common.team.TeamManager;
+import xyz.nucleoid.plasmid.api.game.common.widget.BossBarWidget;
+import xyz.nucleoid.plasmid.api.game.common.widget.SidebarWidget;
+import xyz.nucleoid.plasmid.api.game.event.GameActivityEvents;
+import xyz.nucleoid.plasmid.api.game.event.GamePlayerEvents;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptor;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptorResult;
+import xyz.nucleoid.plasmid.api.game.player.JoinOffer;
+import xyz.nucleoid.plasmid.api.game.player.PlayerSet;
+import xyz.nucleoid.plasmid.api.game.rule.GameRuleType;
+import xyz.nucleoid.stimuli.event.EventResult;
 import xyz.nucleoid.stimuli.event.block.BlockPlaceEvent;
 import xyz.nucleoid.stimuli.event.player.PlayerDamageEvent;
 import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class MineoutActive {
@@ -117,7 +119,8 @@ public final class MineoutActive {
 
             activity.listen(GameActivityEvents.ENABLE, active::onOpen);
 
-            activity.listen(GamePlayerEvents.OFFER, active::offerPlayer);
+            activity.listen(GamePlayerEvents.ACCEPT, active::onAcceptPlayers);
+            activity.listen(GamePlayerEvents.OFFER, JoinOffer::accept);
             activity.listen(GamePlayerEvents.ADD, active::addPlayer);
             activity.listen(GamePlayerEvents.REMOVE, active::removePlayer);
 
@@ -147,7 +150,7 @@ public final class MineoutActive {
             throw new GameOpenException(Text.literal("No start checkpoint!"));
         }
 
-        for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
+        for (ServerPlayerEntity player : this.gameSpace.getPlayers().participants()) {
             this.playerStates.put(player.getUuid(), 0);
 
             player.changeGameMode(GameMode.ADVENTURE);
@@ -155,13 +158,16 @@ public final class MineoutActive {
             startCheckpoint.sendTaskTo(player);
         }
 
+        for (ServerPlayerEntity player : this.gameSpace.getPlayers().spectators()) {
+            this.spawnSpectator(player);
+        }
+
         this.updateSidebar();
     }
 
-    private PlayerOfferResult offerPlayer(PlayerOffer offer) {
-        var player = offer.player();
-        return offer.accept(this.world, Vec3d.ofBottomCenter(this.map.getSpawn()))
-                .and(() -> this.spawnPlayer(player));
+    private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
+        return acceptor.teleport(this.world, Vec3d.ofBottomCenter(this.map.getSpawn()))
+                .thenRunForEach(this::spawnPlayer);
     }
 
     private void addPlayer(ServerPlayerEntity player) {
@@ -173,14 +179,14 @@ public final class MineoutActive {
         this.playerStates.removeInt(player.getUuid());
     }
 
-    private ActionResult onPlaceBlock(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState state, ItemUsageContext context) {
+    private EventResult onPlaceBlock(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState state, ItemUsageContext context) {
         if (this.playerStates.containsKey(player.getUuid())) {
             if (this.map.canBuildAt(pos)) {
                 this.blockDecay.enqueue(pos);
-                return ActionResult.SUCCESS;
+                return EventResult.ALLOW;
             }
         }
-        return ActionResult.FAIL;
+        return EventResult.DENY;
     }
 
     private void tick() {
@@ -292,7 +298,7 @@ public final class MineoutActive {
 
         for (ServerPlayerEntity otherPlayer : players) {
             if (!otherPlayer.getUuid().equals(player.getUuid())) {
-                otherPlayer.playSound(SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                otherPlayer.playSoundToPlayer(SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.PLAYERS, 1.0F, 1.0F);
                 otherPlayer.sendMessage(
                         Text.empty().append(player.getDisplayName())
                                 .append(" finished with a time of ")
@@ -355,45 +361,45 @@ public final class MineoutActive {
         }
     }
 
-    private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
+    private EventResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
         if (player.isSpectator()) {
-            return ActionResult.FAIL;
+            return EventResult.DENY;
         }
 
         if (source.getSource() instanceof ServerPlayerEntity) {
             int checkpointIndex = this.playerStates.getOrDefault(player.getUuid(), -1);
             MineoutCheckpoint checkpoint = this.map.getCheckpoint(checkpointIndex);
             if (checkpoint != null && checkpoint.isPvpEnabled()) {
-                return ActionResult.PASS;
+                return EventResult.PASS;
             }
         }
 
         if (source.isOf(DamageTypes.FLY_INTO_WALL)) {
-            return ActionResult.PASS;
+            return EventResult.PASS;
         }
 
         if (this.shouldRespawnFromDamage(source)) {
             this.spawnPlayer(player);
         }
 
-        return ActionResult.FAIL;
+        return EventResult.DENY;
     }
 
     private boolean shouldRespawnFromDamage(DamageSource source) {
         return source.isOf(DamageTypes.LAVA) || source.isOf(DamageTypes.OUT_OF_WORLD);
     }
 
-    private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
+    private EventResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
         if (!player.isSpectator()) {
             this.spawnPlayer(player);
         }
-        return ActionResult.FAIL;
+        return EventResult.DENY;
     }
 
     private void spawnPlayer(ServerPlayerEntity player) {
         player.setHealth(20.0F);
         player.setFireTicks(0);
-        player.stopFallFlying();
+        player.stopGliding();
 
         int checkpointIndex = this.playerStates.getOrDefault(player.getUuid(), -1);
         var checkpoint = this.map.getCheckpoint(checkpointIndex);
@@ -412,7 +418,7 @@ public final class MineoutActive {
 
         var spawn = this.map.getSpawn();
         float rotation = this.map.getRotation();
-        player.teleport(this.world, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, rotation, 0.0F);
+        player.teleport(this.world, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, Set.of(), rotation, 0.0F, true);
     }
 
     private void updateSidebar() {

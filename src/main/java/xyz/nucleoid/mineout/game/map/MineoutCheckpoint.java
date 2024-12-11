@@ -10,6 +10,7 @@ import xyz.nucleoid.map_templates.BlockBounds;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public final class MineoutCheckpoint {
     private final BlockBounds bounds;
@@ -43,7 +44,7 @@ public final class MineoutCheckpoint {
     }
 
     public void spawnPlayer(ServerPlayerEntity player, float rotation) {
-        player.teleport(player.getServerWorld(), this.spawn.getX() + 0.5, this.spawn.getY(), this.spawn.getZ() + 0.5, rotation, 0.0F);
+        player.teleport(player.getServerWorld(), this.spawn.getX() + 0.5, this.spawn.getY(), this.spawn.getZ() + 0.5, Set.of(), rotation, 0.0F, true);
         player.networkHandler.syncWithPlayerPosition();
 
         this.applyTo(player);

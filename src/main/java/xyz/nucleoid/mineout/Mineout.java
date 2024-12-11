@@ -6,7 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import xyz.nucleoid.mineout.game.MineoutConfig;
 import xyz.nucleoid.mineout.game.MineoutWaiting;
-import xyz.nucleoid.plasmid.game.GameType;
+import xyz.nucleoid.plasmid.api.game.GameType;
 
 public final class Mineout implements ModInitializer {
     public static final String ID = "mineout";
@@ -15,9 +15,13 @@ public final class Mineout implements ModInitializer {
     @Override
     public void onInitialize() {
         GameType.register(
-                new Identifier(Mineout.ID, "mineout"),
+                Mineout.identifier("mineout"),
                 MineoutConfig.CODEC,
                 MineoutWaiting::open
         );
+    }
+
+    public static Identifier identifier(String path) {
+        return Identifier.of(Mineout.ID, path);
     }
 }

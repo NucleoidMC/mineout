@@ -4,23 +4,26 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.mineout.game.map.MineoutMap;
 import xyz.nucleoid.mineout.game.map.MineoutMapGenerator;
-import xyz.nucleoid.plasmid.game.GameOpenContext;
-import xyz.nucleoid.plasmid.game.GameOpenProcedure;
-import xyz.nucleoid.plasmid.game.GameResult;
-import xyz.nucleoid.plasmid.game.GameSpace;
-import xyz.nucleoid.plasmid.game.common.GameWaitingLobby;
-import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
-import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
-import xyz.nucleoid.plasmid.game.player.PlayerOffer;
-import xyz.nucleoid.plasmid.game.player.PlayerOfferResult;
+import xyz.nucleoid.plasmid.api.game.GameOpenContext;
+import xyz.nucleoid.plasmid.api.game.GameOpenProcedure;
+import xyz.nucleoid.plasmid.api.game.GameResult;
+import xyz.nucleoid.plasmid.api.game.GameSpace;
+import xyz.nucleoid.plasmid.api.game.common.GameWaitingLobby;
+import xyz.nucleoid.plasmid.api.game.event.GameActivityEvents;
+import xyz.nucleoid.plasmid.api.game.event.GamePlayerEvents;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptor;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptorResult;
+import xyz.nucleoid.plasmid.api.game.player.JoinOffer;
+import xyz.nucleoid.stimuli.event.EventResult;
 import xyz.nucleoid.stimuli.event.player.PlayerDamageEvent;
 import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
+
+import java.util.Set;
 
 public final class MineoutWaiting {
     private final ServerWorld world;
@@ -51,9 +54,10 @@ public final class MineoutWaiting {
             activity.listen(GameActivityEvents.REQUEST_START, waiting::requestStart);
             activity.listen(GameActivityEvents.TICK, waiting::tick);
 
-            activity.listen(GamePlayerEvents.OFFER, waiting::offerPlayer);
-            activity.listen(PlayerDamageEvent.EVENT, (player, source, amount) -> ActionResult.FAIL);
-            activity.listen(PlayerDeathEvent.EVENT, (player, source) -> ActionResult.FAIL);
+            activity.listen(GamePlayerEvents.ACCEPT, waiting::onAcceptPlayers);
+            activity.listen(GamePlayerEvents.OFFER, JoinOffer::accept);
+            activity.listen(PlayerDamageEvent.EVENT, (player, source, amount) -> EventResult.DENY);
+            activity.listen(PlayerDeathEvent.EVENT, (player, source) -> EventResult.DENY);
         });
     }
 
@@ -66,21 +70,19 @@ public final class MineoutWaiting {
         for (ServerPlayerEntity player : this.gameSpace.getPlayers()) {
             if (!this.map.getBounds().contains(player.getBlockPos())) {
                 Vec3d spawn = Vec3d.ofBottomCenter(this.map.getSpawn());
-                player.teleport(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), this.map.getRotation(), 0);
+                player.teleport(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), Set.of(), this.map.getRotation(), 0, true);
             }
         }
     }
 
-    private PlayerOfferResult offerPlayer(PlayerOffer offer) {
-        var player = offer.player();
-        return offer.accept(this.world, Vec3d.ofBottomCenter(this.map.getSpawn()))
-                .and(() -> {
+    private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
+        return acceptor.teleport(this.world, Vec3d.ofBottomCenter(this.map.getSpawn()), this.map.getRotation(), 0)
+                .thenRunForEach(player -> {
                     player.changeGameMode(GameMode.ADVENTURE);
-                    player.setYaw(this.map.getRotation());
 
                     player.addStatusEffect(new StatusEffectInstance(
                             StatusEffects.NIGHT_VISION,
-                            Integer.MAX_VALUE,
+                            StatusEffectInstance.INFINITE,
                             1,
                             true,
                             false
