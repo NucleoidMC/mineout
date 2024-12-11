@@ -17,12 +17,14 @@
         "give": [
           {
             "id": "minecraft:red_wool",
-            "Count": 64,
-            "tag": {
-              "CanPlaceOn": [
-                "minecraft:red_terracotta",
-                "minecraft:red_wool"
-              ]
+            "count": 64,
+            "components": {
+              "minecraft:can_place_on": {
+                "blocks": [
+                  "minecraft:red_terracotta",
+                  "minecraft:red_wool"
+                ]
+              }
             }
           }
         ],
@@ -34,11 +36,11 @@
         "give": [
           {
             "id": "minecraft:firework_rocket",
-            "Count": 64
+            "count": 64
           }
         ],
         "equip": {
-          "chest": {"id": "minecraft:elytra", "Count": 1}
+          "chest": {"id": "minecraft:elytra"}
         },
         "task": "Fly your elytra through the blocks!"
       },
@@ -47,13 +49,12 @@
         "give": [
           {
             "id": "minecraft:trident",
-            "tag": {
-              "Enchantments": [
-                {"id": "minecraft:riptide", "lvl": 1}
-              ],
-              "Unbreakable": true
-            },
-            "Count": 1
+            "components": {
+              "minecraft:enchantments": {
+                "minecraft:riptide": 1
+              },
+              "minecraft:unbreakable": {}
+            }
           }
         ],
         "task": "Use riptide on the trident to jump through the hoops! (Tip: riptide only works in water!)"

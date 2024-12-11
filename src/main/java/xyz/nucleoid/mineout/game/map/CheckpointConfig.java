@@ -9,7 +9,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplateMetadata;
-import xyz.nucleoid.plasmid.game.GameOpenException;
+import xyz.nucleoid.plasmid.api.game.GameOpenException;
 
 import java.util.List;
 import java.util.Map;
