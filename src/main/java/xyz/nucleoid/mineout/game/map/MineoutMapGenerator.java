@@ -36,7 +36,7 @@ public final class MineoutMapGenerator {
             map.addCheckpoint(checkpoint);
         }
 
-        float rotation = metadata.getData().getFloat("rotation");
+        float rotation = metadata.getData().getFloat("rotation", 0);
         map.setRotation(rotation);
 
         metadata.getRegionBounds("buildable").forEach(map::addBuildable);
